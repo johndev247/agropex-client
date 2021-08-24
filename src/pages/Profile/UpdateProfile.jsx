@@ -1,0 +1,716 @@
+import React, {useState} from "react";
+import {FaArrowDown} from "react-icons/fa";
+import {
+  ErrorMessages,
+  Form,
+  FormInput,
+  FormLabel,
+  FormRouter,
+  FormSelect,
+  SuccessMessage,
+} from "../../Styles/forms.style";
+import {BeatLoader} from "react-spinners";
+import {FlexDiv, FlexBlock, PriButton, Ul, Li} from "../../Styles/globalStyles";
+import {NoPackage, NoPackageMessage} from "../Dashboard/dashboard.style";
+import {
+  ProfileSettings,
+  ProfileSettingsTitle,
+  SettingsCard,
+  SettingsCardsDiv,
+  SettingsCardsTitle,
+  SettingsInfo,
+} from "./updateProfile";
+import {useForm} from "../../utils/hooks";
+import {useMutation} from "@apollo/client";
+import UPDATE_PROFILE from "../../graphql/mutations/UpdateProfile";
+import CHANGE_PASSWORD from "../../graphql/mutations/changePassword";
+import ADD_BANK_ACCOUNT from "../../graphql/mutations/addBankInfo";
+
+const UpdateProfile = ({getUser, loading}) => {
+  const [errors, setErrors] = useState({});
+  const [accErrors, setAccErrors] = useState({});
+  const [state, setState] = useState(getUser.state);
+  const initialValues = {
+    firstName: getUser.firstName,
+    middleName: getUser.middleName,
+    lastName: getUser.lastName,
+    prevPassword: "",
+    newPassword: "",
+    accountName: getUser.bankInfo.accountName,
+    accountNumber: getUser.bankInfo.accountNumber,
+    accountType: getUser.bankInfo.accountType,
+    bankName: getUser.bankInfo.bankName,
+  };
+  const [updated, setUpdated] = useState("");
+  const [addAcc, setAddAcc] = useState(false);
+  const [changePassword, setChangePassword] = useState(false);
+
+  const {handleInput, handleSubmit, values} = useForm(
+    callUpdate,
+    initialValues
+  );
+
+  const handleState = (e) => {
+    setState(e.target.value);
+  };
+
+  const [updateProfile, {loading: updateLoading}] = useMutation(
+    UPDATE_PROFILE,
+    {
+      variables: {
+        firstName: values.firstName,
+        middleName: values.middleName,
+        lastName: values.lastName,
+        state,
+      },
+      onCompleted: (data) => {
+        setUpdated("details");
+      },
+      onError: (err) => {
+        setErrors(err.graphQLErrors[0].extensions.exception.errors);
+      },
+    }
+  );
+
+  const [updatePassword, {loading: changePassLoading}] = useMutation(
+    CHANGE_PASSWORD,
+    {
+      variables: {
+        prevPassword: values.prevPassword,
+        newPassword: values.newPassword,
+      },
+
+      onCompleted: () => {
+        setUpdated("password");
+        setErrors({});
+      },
+      onError: (err) => {
+        setErrors(err.graphQLErrors[0].extensions.exception.errors);
+      },
+    }
+  );
+
+  const [addBankAccount, {loading: addAccLoading}] = useMutation(
+    ADD_BANK_ACCOUNT,
+    {
+      variables: {
+        accountName: values.accountName,
+        accountNumber: values.accountNumber,
+        accountType: values.accountType,
+        bankName: values.bankName,
+      },
+      onCompleted: (data) => {
+        setAccErrors({});
+        addAcc ? setUpdated("addBank") : setUpdated("updateBank");
+      },
+      onError: (err) => {
+        setUpdated("");
+        setAccErrors(err.graphQLErrors[0].extensions.exception.errors);
+      },
+    }
+  );
+
+  const handleSwitchPage = () => {
+    setErrors({});
+    setChangePassword(false);
+  };
+
+  const handlePass = (e) => {
+    e.preventDefault();
+    setErrors({});
+    updatePassword();
+  };
+
+  const handleUpdateBank = (e) => {
+    e.preventDefault();
+    addBankAccount();
+  };
+
+  const handlePassPage = (e) => {
+    setChangePassword(true);
+    setUpdated("");
+  };
+
+  function callUpdate() {
+    updateProfile();
+  }
+  return (
+    <div>
+      <ProfileSettings>
+        <ProfileSettingsTitle>Settings</ProfileSettingsTitle>
+        <SettingsCardsDiv>
+          {changePassword ? (
+            <SettingsCard>
+              <SettingsCardsTitle>Change Password</SettingsCardsTitle>
+              <SuccessMessage
+                show={
+                  updated.length > 0 &&
+                  (updated === "details" || updated === "password")
+                }
+              >
+                <p style={{textAlign: "center"}}>
+                  {updated === "details"
+                    ? `Profile Info Updated Successfully`
+                    : updated === "password" && `Password Changed Successfully`}
+                </p>
+              </SuccessMessage>
+              <Form onSubmit={handlePass}>
+                <FlexDiv>
+                  <FlexBlock>
+                    <FormLabel>Previous Password</FormLabel>
+                    <FormInput
+                      type="password"
+                      name="prevPassword"
+                      onChange={handleInput}
+                      value={values.prevPassword}
+                    />
+                  </FlexBlock>
+                  <FlexBlock>
+                    <FormLabel>New Password</FormLabel>
+                    <FormInput
+                      type="password"
+                      name="newPassword"
+                      onChange={handleInput}
+                      value={values.newPassword}
+                    />
+                  </FlexBlock>
+                </FlexDiv>
+                {changePassLoading ? (
+                  <BeatLoader size={20} color={"#449b62;"} />
+                ) : (
+                  <PriButton onChange={handlePass} onSubmit={handlePass}>
+                    Change Password
+                  </PriButton>
+                )}
+              </Form>
+              {Object.keys(errors).length > 0 && (
+                <ErrorMessages>
+                  <h4 style={{margin: "0"}}>Error!</h4>
+                  <Ul>
+                    {Object.values(errors).map((error) => (
+                      <Li key={error}>* {error}</Li>
+                    ))}
+                  </Ul>
+                </ErrorMessages>
+              )}
+              <FormRouter
+                style={{alignSelf: "flex-start"}}
+                onClick={handleSwitchPage}
+              >
+                Click Here to Update Details
+              </FormRouter>
+            </SettingsCard>
+          ) : (
+            <SettingsCard>
+              <SettingsCardsTitle>Update Profile</SettingsCardsTitle>
+              <SuccessMessage
+                show={
+                  updated.length > 0 &&
+                  (updated === "details" || updated === "password")
+                }
+              >
+                <p style={{textAlign: "center"}}>
+                  {updated === "details"
+                    ? `Profile Info Updated Successfully`
+                    : updated === "password" && `Password Changed Successfully`}
+                </p>
+              </SuccessMessage>
+
+              <Form onSubmit={handleSubmit}>
+                <FlexDiv>
+                  <FlexBlock>
+                    <FormLabel>First Name</FormLabel>
+                    <FormInput
+                      type="text"
+                      name="firstName"
+                      placeholder={getUser.firstName}
+                      value={values.firstName}
+                      onChange={handleInput}
+                    />
+                  </FlexBlock>
+                  <FlexBlock>
+                    <FormLabel>Middle Name</FormLabel>
+                    <FormInput
+                      type="text"
+                      name="middleName"
+                      placeholder={getUser.middleName}
+                      value={values.middleName}
+                      onChange={handleInput}
+                    />
+                  </FlexBlock>
+                </FlexDiv>
+                <FlexDiv>
+                  <FlexBlock>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormInput
+                      type="text"
+                      name="lastName"
+                      placeholder={getUser.lastName}
+                      value={values.lastName}
+                      onChange={handleInput}
+                    />
+                  </FlexBlock>
+                  <FlexBlock>
+                    <FormLabel>State</FormLabel>
+                    <FormSelect onChange={handleState}>
+                      <option
+                        selected={getUser.state === "Abia"}
+                        name="state"
+                        value="Abia"
+                      >
+                        Abia
+                      </option>
+                      <option
+                        selected={getUser.state === "Adamawa"}
+                        name="state"
+                        value="Adamawa"
+                      >
+                        Adamawa
+                      </option>
+                      <option
+                        selected={getUser.state === "Akwa Ibom"}
+                        name="state"
+                        value="Akwa Ibom"
+                        onChange={handleInput}
+                      >
+                        Akwa Ibom
+                      </option>
+                      <option
+                        selected={getUser.state === "Anambra"}
+                        name="state"
+                        value="Anambra"
+                      >
+                        Anambra
+                      </option>
+                      <option
+                        selected={getUser.state === "Bauchi"}
+                        name="state"
+                        value="Bauchi"
+                      >
+                        Bauchi
+                      </option>
+                      <option
+                        selected={getUser.state === "Bayelsa"}
+                        name="state"
+                        value="Bayelsa"
+                      >
+                        Bayelsa
+                      </option>
+                      <option
+                        selected={getUser.state === "Benue"}
+                        name="state"
+                        value="Benue"
+                      >
+                        Benue
+                      </option>
+                      <option
+                        selected={getUser.state === "Borno"}
+                        name="state"
+                        value="Borno"
+                      >
+                        Borno
+                      </option>
+                      <option
+                        selected={getUser.state === "Cross Rive"}
+                        name="state"
+                        value="Cross Rive"
+                      >
+                        Cross River
+                      </option>
+                      <option
+                        selected={getUser.state === "Delta"}
+                        name="state"
+                        value="Delta"
+                      >
+                        Delta
+                      </option>
+                      <option
+                        selected={getUser.state === "Ebonyi"}
+                        name="state"
+                        value="Ebonyi"
+                      >
+                        Ebonyi
+                      </option>
+                      <option
+                        selected={getUser.state === "Edo"}
+                        name="state"
+                        value="Edo"
+                      >
+                        Edo
+                      </option>
+                      <option
+                        selected={getUser.state === "Ekiti"}
+                        name="state"
+                        value="Ekiti"
+                      >
+                        Ekiti
+                      </option>
+                      <option
+                        selected={getUser.state === "Enugu"}
+                        name="state"
+                        value="Enugu"
+                      >
+                        Enugu
+                      </option>
+                      <option
+                        selected={getUser.state === "FCT"}
+                        name="state"
+                        value="FCT"
+                      >
+                        Federal Capital Territory
+                      </option>
+                      <option
+                        selected={getUser.state === "Gombe"}
+                        name="state"
+                        value="Gombe"
+                      >
+                        Gombe
+                      </option>
+                      <option
+                        selected={getUser.state === "Imo"}
+                        name="state"
+                        value="Imo"
+                      >
+                        Imo
+                      </option>
+                      <option
+                        selected={getUser.state === "Jigawa"}
+                        name="state"
+                        value="Jigawa"
+                      >
+                        Jigawa
+                      </option>
+                      <option
+                        selected={getUser.state === "Kaduna"}
+                        name="state"
+                        value="Kaduna"
+                      >
+                        Kaduna
+                      </option>
+                      <option
+                        selected={getUser.state === "Kano"}
+                        name="state"
+                        value="Kano"
+                      >
+                        Kano
+                      </option>
+                      <option
+                        selected={getUser.state === "Katsina"}
+                        name="state"
+                        value="Katsina"
+                      >
+                        Katsina
+                      </option>
+                      <option
+                        selected={getUser.state === "Kebbi"}
+                        name="state"
+                        value="Kebbi"
+                      >
+                        Kebbi
+                      </option>
+                      <option
+                        selected={getUser.state === "Kogi"}
+                        name="state"
+                        value="Kogi"
+                      >
+                        Kogi
+                      </option>
+                      <option
+                        selected={getUser.state === "Kwara"}
+                        name="state"
+                        value="Kwara"
+                      >
+                        Kwara
+                      </option>
+                      <option
+                        selected={getUser.state === "Lagos"}
+                        name="state"
+                        value="Lagos"
+                      >
+                        Lagos
+                      </option>
+                      <option
+                        selected={getUser.state === "Nasarawa"}
+                        name="state"
+                        value="Nasarawa"
+                      >
+                        Nasarawa
+                      </option>
+                      <option
+                        selected={getUser.state === "Niger"}
+                        name="state"
+                        value="Niger"
+                      >
+                        Niger
+                      </option>
+                      <option
+                        selected={getUser.state === "Ogun"}
+                        name="state"
+                        value="Ogun"
+                      >
+                        Ogun
+                      </option>
+                      <option
+                        selected={getUser.state === "Ondo"}
+                        name="state"
+                        value="Ondo"
+                      >
+                        Ondo
+                      </option>
+                      <option
+                        selected={getUser.state === "Osun"}
+                        name="state"
+                        value="Osun"
+                      >
+                        Osun
+                      </option>
+                      <option
+                        selected={getUser.state === "Oyo"}
+                        name="state"
+                        value="Oyo"
+                      >
+                        Oyo
+                      </option>
+                      <option
+                        selected={getUser.state === "Plateau"}
+                        name="state"
+                        value="Plateau"
+                      >
+                        Plateau
+                      </option>
+                      <option
+                        selected={getUser.state === "Rivers"}
+                        name="state"
+                        value="Rivers"
+                      >
+                        Rivers
+                      </option>
+                      <option
+                        selected={getUser.state === "Sokoto"}
+                        name="state"
+                        value="Sokoto"
+                      >
+                        Sokoto
+                      </option>
+                      <option
+                        selected={getUser.state === "Taraba"}
+                        name="state"
+                        value="Taraba"
+                      >
+                        Taraba
+                      </option>
+                      <option
+                        selected={getUser.state === "Yobe"}
+                        name="state"
+                        value="Yobe"
+                      >
+                        Yobe
+                      </option>
+                      <option
+                        selected={getUser.state === "Zamfara"}
+                        name="state"
+                        value="Zamfara"
+                      >
+                        Zamfara
+                      </option>
+                    </FormSelect>
+                  </FlexBlock>
+                </FlexDiv>
+                <FlexDiv>
+                  <FlexBlock>
+                    <FormLabel>Email</FormLabel>
+                    <FormInput value={getUser.email} disabled />
+                  </FlexBlock>
+                  <FlexBlock>
+                    <FormLabel>Phone</FormLabel>
+                    <FormInput value={getUser.phone} disabled />
+                  </FlexBlock>
+                </FlexDiv>
+                {updateLoading ? (
+                  <BeatLoader size={20} color={"#449b62;"} />
+                ) : (
+                  <PriButton onClick={handleSubmit}> Update</PriButton>
+                )}
+                <FormRouter
+                  style={{alignSelf: "flex-start"}}
+                  onClick={handlePassPage}
+                >
+                  Click Here to Change Password
+                </FormRouter>
+              </Form>
+              {Object.keys(errors).length > 0 && (
+                <ErrorMessages>
+                  <h4 style={{margin: "0"}}>Error!</h4>
+                  <Ul>
+                    {Object.values(errors).map((error) => (
+                      <Li key={error}>* {error}</Li>
+                    ))}
+                  </Ul>
+                </ErrorMessages>
+              )}
+            </SettingsCard>
+          )}
+          {getUser.bankInfo.addedAt !== "" ? (
+            <SettingsCard>
+              <SettingsCardsTitle>Update Bank Info</SettingsCardsTitle>
+              <SuccessMessage
+                show={
+                  updated.length > 0 &&
+                  (updated === "addBank" || updated === "updateBank")
+                }
+              >
+                {updated === "addBank"
+                  ? `Bank Account Added Successfully`
+                  : updated === "updateBank" &&
+                    `Bank Info Updated Successfully`}
+              </SuccessMessage>
+              <SettingsInfo>
+                <Form onSubmit={handleUpdateBank}>
+                  <FlexDiv>
+                    <FormLabel>Account Name:</FormLabel>
+                    <FormInput
+                      type="text"
+                      name="accountName"
+                      value={values.accountName}
+                      onChange={handleInput}
+                    />
+                  </FlexDiv>
+                  <FlexDiv>
+                    <FormLabel>Account Num:</FormLabel>
+                    <FormInput
+                      type="text"
+                      name="accountNumber"
+                      value={values.accountNumber}
+                      onChange={handleInput}
+                    />
+                  </FlexDiv>
+
+                  <FlexDiv>
+                    <FormLabel>Account Type:</FormLabel>
+                    <FormInput
+                      type="text"
+                      name="accountType"
+                      value={values.accountType}
+                      onChange={handleInput}
+                    />
+                  </FlexDiv>
+                  <FlexDiv>
+                    <FormLabel>Bank Name:</FormLabel>
+                    <FormInput
+                      type="text"
+                      name="bankName"
+                      value={values.bankName}
+                      onChange={handleInput}
+                    />
+                  </FlexDiv>
+
+                  {addAccLoading ? (
+                    <BeatLoader size={20} color={"#449b62;"} />
+                  ) : (
+                    <PriButton onSubmit={handleUpdateBank}> Update</PriButton>
+                  )}
+                </Form>
+                {Object.keys(accErrors).length > 0 && (
+                  <ErrorMessages>
+                    <h4 style={{margin: "0"}}>Error!</h4>
+                    <Ul>
+                      {Object.values(accErrors).map((error) => (
+                        <Li key={error}>* {error}</Li>
+                      ))}
+                    </Ul>
+                  </ErrorMessages>
+                )}
+              </SettingsInfo>
+            </SettingsCard>
+          ) : (
+            <SettingsCard>
+              <SettingsCardsTitle>Add Bank Account</SettingsCardsTitle>
+              <SuccessMessage
+                show={
+                  updated.length > 0 &&
+                  (updated === "addBank" || updated === "updateBank")
+                }
+              >
+                {updated === "addBank"
+                  ? `Bank Account Added Successfully`
+                  : updated === "updateBank" &&
+                    `Bank Info Updated Successfully`}
+              </SuccessMessage>
+              <SettingsInfo>
+                {!addAcc ? (
+                  <NoPackage>
+                    <PriButton onClick={() => setAddAcc(true)}>
+                      Add Account
+                    </PriButton>
+                  </NoPackage>
+                ) : (
+                  <>
+                    <Form onSubmit={handleUpdateBank}>
+                      <FlexDiv>
+                        <FormLabel>Account Name:</FormLabel>
+                        <FormInput
+                          type="text"
+                          name="accountName"
+                          value={values.accountName}
+                          onChange={handleInput}
+                        />
+                      </FlexDiv>
+                      <FlexDiv>
+                        <FormLabel>Account Num:</FormLabel>
+                        <FormInput
+                          type="text"
+                          name="accountNumber"
+                          value={values.accountNumber}
+                          onChange={handleInput}
+                        />
+                      </FlexDiv>
+
+                      <FlexDiv>
+                        <FormLabel>Account Type:</FormLabel>
+                        <FormInput
+                          type="text"
+                          name="accountType"
+                          value={values.accountType}
+                          onChange={handleInput}
+                        />
+                      </FlexDiv>
+                      <FlexDiv>
+                        <FormLabel>Bank Name:</FormLabel>
+                        <FormInput
+                          type="text"
+                          name="bankName"
+                          value={values.bankName}
+                          onChange={handleInput}
+                        />
+                      </FlexDiv>
+
+                      {addAccLoading ? (
+                        <BeatLoader size={20} color={"#449b62;"} />
+                      ) : (
+                        <PriButton onClick={handleUpdateBank}>
+                          Add Account
+                        </PriButton>
+                      )}
+                    </Form>
+                    {Object.keys(accErrors).length > 0 && (
+                      <ErrorMessages>
+                        <h4 style={{margin: "0"}}>Error!</h4>
+                        <Ul>
+                          {Object.values(accErrors).map((error) => (
+                            <Li key={error}>* {error}</Li>
+                          ))}
+                        </Ul>
+                      </ErrorMessages>
+                    )}
+                  </>
+                )}
+              </SettingsInfo>
+            </SettingsCard>
+          )}
+        </SettingsCardsDiv>
+      </ProfileSettings>
+    </div>
+  );
+};
+
+export default UpdateProfile;
