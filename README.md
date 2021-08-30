@@ -1,8 +1,4 @@
-# Getting Started with Create React App
-
-Sever Repo Here https://github.com/johndev247/agropex-server
-
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# Sever Repo Here https://github.com/johndev247/agropex-server
 
 ## Available Scripts
 
