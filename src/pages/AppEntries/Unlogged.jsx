@@ -269,7 +269,6 @@ const Unlogged = () => {
           </Testimonies>
         </HomeFooter>
       </HomePage>
-      <Contact>Contact Us</Contact>
       <Footer />
     </>
   );
