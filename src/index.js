@@ -26,7 +26,7 @@ if (localStorage.getItem(AUTH_TOKEN)) {
   }
 }
 const httpLink = createUploadLink({
-  uri: "https://rocky-stream-31217.herokuapp.com/",
+  uri: "https://rocky-stream-31217.herokuapp.com/graphql",
 });
 
 const authLink = setContext((_, {headers}) => {
