@@ -5,10 +5,13 @@ import PrivateRoute from "./pages/AppEntries/PrivateRoute";
 import AuthRoute from "./pages/AppEntries/AuthRoute";
 import LoggedHome from "./pages/LoggedHome/LoggedHome";
 import Unlogged from "./pages/AppEntries/Unlogged";
+import {useQuery} from "@apollo/client";
 import ResetPassword from "./Components/ForgetPassword/ResetPassword";
 import ResetRoute from "./pages/AppEntries/ResetRoute";
+import GET_USERS from "../graphql/queries/getUsers"
 
 function App() {
+  const {data} = useQuery(GET_USERS)
   return (
     <Router>
       <Switch>
